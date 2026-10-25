@@ -2,6 +2,10 @@
 const refreshBtn = document.getElementById("refreshBtn");
 const statusText = document.getElementById("status");
 
+// ========================================
+// 1. LOAD DASHBOARD ANALYTICS
+// ========================================
+
 async function loadDashboard() {
     statusText.textContent = "Loading analytics...";
     refreshBtn.disabled = true;
@@ -48,7 +52,8 @@ async function loadDashboard() {
             Math.max(0, Number(data.workout_completion_rate) || 0)
         );
 
-        document.getElementById("completionRate").textContent = `${rate}%`;
+        document.getElementById("completionRate").textContent =
+            `${rate}%`;
 
         document.getElementById("progressRing").style.background =
             `conic-gradient(#7158e2 ${rate}%, #eeeef5 ${rate}%)`;
@@ -60,7 +65,11 @@ async function loadDashboard() {
         const plans = data.membership_plan_distribution ?? {};
         const planContainer = document.getElementById("planDistribution");
         const entries = Object.entries(plans);
-        const maxCount = Math.max(1, ...entries.map(([, count]) => count));
+
+        const maxCount = Math.max(
+            1,
+            ...entries.map(([, count]) => Number(count) || 0)
+        );
 
         planContainer.replaceChildren();
 
@@ -89,7 +98,8 @@ async function loadDashboard() {
 
                 const bar = document.createElement("div");
                 bar.className = "plan-bar";
-                bar.style.width = `${(count / maxCount) * 100}%`;
+                bar.style.width =
+                    `${((Number(count) || 0) / maxCount) * 100}%`;
 
                 track.appendChild(bar);
                 row.append(label, track);
@@ -99,6 +109,7 @@ async function loadDashboard() {
 
         statusText.textContent =
             `Analytics updated successfully at ${new Date().toLocaleTimeString()}.`;
+
     } catch (error) {
         console.error("Dashboard loading failed:", error);
         statusText.textContent =
@@ -111,9 +122,19 @@ async function loadDashboard() {
 refreshBtn.addEventListener("click", loadDashboard);
 loadDashboard();
 
-const refreshMembersBtn = document.getElementById("refreshMembersBtn");
-const membersStatus = document.getElementById("membersStatus");
-const membersTableBody = document.getElementById("membersTableBody");
+
+// ========================================
+// 2. LOAD MEMBERS TABLE
+// ========================================
+
+const refreshMembersBtn =
+    document.getElementById("refreshMembersBtn");
+
+const membersStatus =
+    document.getElementById("membersStatus");
+
+const membersTableBody =
+    document.getElementById("membersTableBody");
 
 async function loadMembers() {
     membersStatus.textContent = "Loading members...";
@@ -123,6 +144,7 @@ async function loadMembers() {
 
     const loadingRow = document.createElement("tr");
     const loadingCell = document.createElement("td");
+
     loadingCell.colSpan = 7;
     loadingCell.textContent = "Loading members...";
     loadingRow.appendChild(loadingCell);
@@ -155,7 +177,8 @@ async function loadMembers() {
             const cell = document.createElement("td");
 
             cell.colSpan = 7;
-            cell.textContent = "No members found. Add a member to get started.";
+            cell.textContent =
+                "No members found. Add a member to get started.";
 
             row.appendChild(cell);
             membersTableBody.appendChild(row);
@@ -181,7 +204,9 @@ async function loadMembers() {
                 const cell = document.createElement("td");
 
                 cell.textContent =
-                    value === null || value === undefined || value === ""
+                    value === null ||
+                    value === undefined ||
+                    value === ""
                         ? "—"
                         : String(value);
 
@@ -193,6 +218,7 @@ async function loadMembers() {
 
         membersStatus.textContent =
             `${members.length} member${members.length === 1 ? "" : "s"} loaded successfully.`;
+
     } catch (error) {
         console.error("Failed to load members:", error);
 
@@ -202,13 +228,15 @@ async function loadMembers() {
         const cell = document.createElement("td");
 
         cell.colSpan = 7;
-        cell.textContent = "Unable to load members. Please try refreshing.";
+        cell.textContent =
+            "Unable to load members. Please try refreshing.";
 
         row.appendChild(cell);
         membersTableBody.appendChild(row);
 
         membersStatus.textContent =
             "Could not load members. Check the API response and Flask server.";
+
     } finally {
         refreshMembersBtn.disabled = false;
     }
@@ -219,27 +247,76 @@ refreshMembersBtn.addEventListener("click", loadMembers);
 // Load the members list when the dashboard opens.
 loadMembers();
 
+
+// ========================================
+// 3. ADD MEMBER FORM
+// ========================================
+
 const addMemberBtn = document.getElementById("addMemberBtn");
 const cancelMemberBtn = document.getElementById("cancelMemberBtn");
-const memberFormContainer = document.getElementById("memberFormContainer");
+const memberFormContainer =
+    document.getElementById("memberFormContainer");
 const addMemberForm = document.getElementById("addMemberForm");
-const memberFormMessage = document.getElementById("memberFormMessage");
+const memberFormMessage =
+    document.getElementById("memberFormMessage");
 
+const joinDateInput = document.getElementById("memberJoinDate");
+
+// Return today's date in local YYYY-MM-DD format.
+function getLocalDateString() {
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+// Restrict the date picker without changing the selected date.
+function setJoinDateLimit() {
+    joinDateInput.max = getLocalDateString();
+}
+
+// Open the Add Member form.
 addMemberBtn.addEventListener("click", () => {
     memberFormContainer.hidden = false;
-    document.getElementById("memberJoinDate").value =
-        new Date().toLocaleDateString("en-CA");
+
+    setJoinDateLimit();
+
+    // Set the default date to today.
+    joinDateInput.value = getLocalDateString();
+
+    memberFormMessage.textContent = "";
+
     document.getElementById("memberName").focus();
 });
 
+// Close the form when Cancel is clicked.
 cancelMemberBtn.addEventListener("click", () => {
     addMemberForm.reset();
     memberFormContainer.hidden = true;
     memberFormMessage.textContent = "";
 });
 
+// Submit the Add Member form.
 addMemberForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    const today = getLocalDateString();
+
+    // Refresh the maximum date before validating.
+    joinDateInput.max = today;
+
+    // Allow today, but reject missing or future dates.
+    if (
+        !joinDateInput.value ||
+        joinDateInput.value > today
+    ) {
+        memberFormMessage.textContent =
+            "Join date cannot be empty or in the future.";
+        return;
+    }
 
     const formData = new FormData(addMemberForm);
 
@@ -266,7 +343,9 @@ addMemberForm.addEventListener("submit", async (event) => {
         const result = await response.json();
 
         if (!response.ok) {
-            throw new Error(result.error || "Could not add member.");
+            throw new Error(
+                result.error || "Could not add member."
+            );
         }
 
         memberFormMessage.textContent =
@@ -275,13 +354,16 @@ addMemberForm.addEventListener("submit", async (event) => {
         addMemberForm.reset();
         memberFormContainer.hidden = true;
 
+        // Refresh the table and dashboard analytics.
         await Promise.all([
             loadMembers(),
             loadDashboard()
         ]);
 
     } catch (error) {
-        memberFormMessage.textContent = error.message ||
-            "Something went wrong. Please try again.";
+        console.error("Failed to add member:", error);
+
+        memberFormMessage.textContent =
+            error.message || "Something went wrong. Please try again.";
     }
 });
