@@ -1,0 +1,241 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Management Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+    <h2>FITZONE</h2>
+
+    <p class="sidebar-label">MAIN MENU</p>
+
+    <nav class="sidebar-nav" aria-label="Main navigation">
+        <a class="active" href="#overview" aria-current="page">
+            <span class="nav-icon">⌂</span>
+            <span>Dashboard</span>
+        </a>
+
+        <a href="#members">
+            <span class="nav-icon">♙</span>
+            <span>Members</span>
+        </a>
+
+        <a href="#attendance">
+            <span class="nav-icon">◷</span>
+            <span>Attendance</span>
+        </a>
+
+        <a href="#workouts">
+            <span class="nav-icon">◈</span>
+            <span>Workouts</span>
+        </a>
+
+        <a href="#memberships">
+            <span class="nav-icon">▤</span>
+            <span>Memberships</span>
+        </a>
+    </nav>
+</div>
+
+    </div>
+
+    <main class="main-content">
+        <header class="topbar" id="overview">
+            <div>
+                <p class="eyebrow">OVERVIEW</p>
+                <h1>Gym Dashboard</h1>
+                <p class="subtitle">Your gym performance at a glance.</p>
+            </div>
+            <button id="refreshBtn">↻ Refresh data</button>
+        </header>
+
+        <p id="status" role="status">Loading analytics...</p>
+
+        <section class="stats-grid">
+            <article class="stat-card">
+                <p>Total Members</p>
+                <h2 id="totalMembers">—</h2>
+                <span>Registered members</span>
+            </article>
+            <article class="stat-card">
+                <p>Total Revenue</p>
+                <h2 id="totalRevenue">—</h2>
+                <span>Membership amounts</span>
+            </article>
+            <article class="stat-card">
+                <p>Active Memberships</p>
+                <h2 id="activeMemberships">—</h2>
+                <span>Currently valid</span>
+            </article>
+            <article class="stat-card">
+                <p>Attendance Records</p>
+                <h2 id="attendanceRecords">—</h2>
+                <span>Recorded check-ins</span>
+            </article>
+        </section>
+
+        <section class="content-grid">
+            <article class="panel" id="workouts">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">PERFORMANCE</p>
+                        <h2>Workout Completion</h2>
+                    </div>
+                    <span class="pill">Progress</span>
+                </div>
+                <div class="progress-layout">
+                    <div class="progress-ring" id="progressRing">
+                        <div class="ring-inner">
+                            <strong id="completionRate">0%</strong>
+                            <span>Completed</span>
+                        </div>
+                    </div>
+                    <div class="progress-details">
+                        <p>Total workout plans <strong id="totalPlans">0</strong></p>
+                        <p>Completed <strong id="completedWorkouts">0</strong></p>
+                        <p>Pending <strong id="pendingWorkouts">0</strong></p>
+                        <p>Progress records <strong id="progressRecords">0</strong></p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="panel" id="memberships">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">SUBSCRIPTIONS</p>
+                        <h2>Membership Plans</h2>
+                    </div>
+                </div>
+                <div id="planDistribution" class="plan-list">
+                    <p>Loading plans...</p>
+                </div>
+                <div class="attendance-summary" id="attendance">
+                    <span>Members who attended</span>
+                    <strong id="uniqueAttendees">0</strong>
+                </div>
+            </article>
+        </section>
+           
+<section class="panel members-panel" id="members">
+    <div class="panel-heading">
+        <div>
+            <p class="eyebrow">GYM DIRECTORY</p>
+            
+<div class="section-heading">
+    <div>
+        <h2>Registered Members</h2>
+        <p>Add and manage your gym members.</p>
+    </div>
+    <button type="button" id="addMemberBtn" class="add-member-btn">
+        + Add Member
+    </button>
+</div>
+
+<div id="memberFormContainer" class="member-form-container" hidden>
+    <h3>Register New Member</h3>
+
+    <form id="addMemberForm">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="memberName">Full Name</label>
+                <input id="memberName" name="name" type="text"
+                       placeholder="Enter full name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="memberAge">Age</label>
+                <input id="memberAge" name="age" type="number"
+                       min="1" max="120" placeholder="Enter age" required>
+            </div>
+
+            <div class="form-group">
+                <label for="memberGender">Gender</label>
+                <select id="memberGender" name="gender" required>
+                    <option value="">Select gender</option>
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="memberWeight">Weight (kg)</label>
+                <input id="memberWeight" name="weight" type="number"
+                       min="0.1" step="0.1" placeholder="Enter weight" required>
+            </div>
+
+            <div class="form-group">
+                <label for="memberGoal">Fitness Goal</label>
+                <select id="memberGoal" name="fitness_goal" required>
+                    <option value="">Select a goal</option>
+                    <option value="Weight Loss">Weight Loss</option>
+                    <option value="Muscle Gain">Muscle Gain</option>
+                    <option value="General Fitness">General Fitness</option>
+                    <option value="Endurance">Endurance</option>
+                    <option value="Flexibility">Flexibility</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="memberJoinDate">Join Date</label>
+                <input id="memberJoinDate" name="join_date"
+                       type="date" required>
+            </div>
+        </div>
+
+        <p id="memberFormMessage" role="status"></p>
+
+        <div class="form-actions">
+            <button type="submit" class="add-member-btn">Save Member</button>
+            <button type="button" id="cancelMemberBtn" class="cancel-btn">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+```
+            <p class="members-subtitle">
+                View your gym members and their fitness details.
+            </p>
+        </div>
+        <button id="refreshMembersBtn" type="button">
+            ↻ Refresh members
+        </button>
+    </div>
+
+    <p id="membersStatus" role="status" aria-live="polite">
+        Loading members...
+    </p>
+
+    <div class="table-wrapper">
+        <table class="members-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Member</th>
+                    <th>Age</th>
+                    <th>Gender</th>
+                    <th>Weight</th>
+                    <th>Fitness Goal</th>
+                    <th>Join Date</th>
+                </tr>
+            </thead>
+            <tbody id="membersTableBody">
+                <tr>
+                    <td colspan="7">Loading members...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+        <footer>FITZONE · Gym Management System</footer>
+    </main>
+
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>

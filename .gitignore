@@ -1,0 +1,36 @@
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+
+# Local databases and database backups
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+*.db-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.sqlite
+*.sqlite3
+
+# Application logs
+logs/
+*.log
+
+# Editor and operating-system files
+.vscode/
+.DS_Store
+Thumbs.db
+
+.postman/
