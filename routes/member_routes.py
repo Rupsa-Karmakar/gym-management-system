@@ -1,20 +1,29 @@
 
 from flask import Blueprint, request, jsonify
-from datetime import date
 from db import get_db
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
-
-today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
 
 member_bp = Blueprint("members", __name__)
 
+
+# Get today's date in Indian Standard Time.
+def get_indian_today():
+    return datetime.now(ZoneInfo("Asia/Kolkata")).date()
+
+
+# ========================================
+# 1. ADD MEMBER
+# ========================================
 
 @member_bp.post("/members")
 def add_member():
     data = request.get_json(silent=True)
 
     if not isinstance(data, dict):
-        return jsonify({"error": "Request body must be valid JSON"}), 400
+        return jsonify({
+            "error": "Request body must be valid JSON"
+        }), 400
 
     required = [
         "name", "age", "gender",
@@ -22,6 +31,7 @@ def add_member():
     ]
 
     missing = [field for field in required if field not in data]
+
     if missing:
         return jsonify({
             "error": "Missing required fields",
@@ -29,9 +39,18 @@ def add_member():
         }), 400
 
     name = data["name"]
+    gender = data["gender"]
+    fitness_goal = data["fitness_goal"]
+    join_date = data["join_date"]
 
     if not isinstance(name, str) or not name.strip():
         return jsonify({"error": "Name is required"}), 400
+
+    if not isinstance(gender, str) or not gender.strip():
+        return jsonify({"error": "Gender is required"}), 400
+
+    if not isinstance(fitness_goal, str) or not fitness_goal.strip():
+        return jsonify({"error": "Fitness goal is required"}), 400
 
     try:
         age = int(data["age"])
@@ -42,24 +61,31 @@ def add_member():
         }), 400
 
     if not 1 <= age <= 120 or weight <= 0:
-        return jsonify({"error": "Invalid age or weight"}), 400
-
-    if not isinstance(data["gender"], str) or not data["gender"].strip():
-        return jsonify({"error": "Gender is required"}), 400
-
-    if not isinstance(data["fitness_goal"], str) or not data["fitness_goal"].strip():
-        return jsonify({"error": "Fitness goal is required"}), 400
-
-    try:
-        join_date = date.fromisoformat(data["join_date"])
-    except (ValueError, TypeError):
         return jsonify({
-            "error": "join_date must use YYYY-MM-DD"
+            "error": "Invalid age or weight"
         }), 400
 
-    if join_date > date.today():
+    # Validate the join date.
+    try:
+        if not isinstance(join_date, str):
+            raise ValueError
+
+        join_date_obj = date.fromisoformat(join_date)
+
+        # Ensure the supplied date uses YYYY-MM-DD format.
+        if join_date_obj.isoformat() != join_date:
+            raise ValueError
+
+    except (ValueError, TypeError):
         return jsonify({
-            "error": "Join date cannot be in the future"
+            "error": "Invalid join date format. Use YYYY-MM-DD."
+        }), 400
+
+    today = get_indian_today()
+
+    if join_date_obj > today:
+        return jsonify({
+            "error": "Join date cannot be in the future."
         }), 400
 
     db = get_db()
@@ -74,10 +100,10 @@ def add_member():
             (
                 name.strip(),
                 age,
-                data["gender"].strip(),
+                gender.strip(),
                 weight,
-                data["fitness_goal"].strip(),
-                join_date.isoformat()
+                fitness_goal.strip(),
+                join_date_obj.isoformat()
             )
         )
 
@@ -95,9 +121,14 @@ def add_member():
         }), 500
 
 
+# ========================================
+# 2. LIST MEMBERS
+# ========================================
+
 @member_bp.get("/members")
 def list_members():
     db = get_db()
+
     search = request.args.get("search", "").strip()
 
     rows = db.execute(
@@ -109,15 +140,21 @@ def list_members():
         (f"%{search}%",)
     ).fetchall()
 
-    return jsonify([dict(row) for row in rows])
+    return jsonify([dict(row) for row in rows]), 200
 
+
+# ========================================
+# 3. UPDATE MEMBER
+# ========================================
 
 @member_bp.put("/members/<int:member_id>")
 def update_member(member_id):
     data = request.get_json(silent=True)
 
     if not isinstance(data, dict):
-        return jsonify({"error": "Request body must be valid JSON"}), 400
+        return jsonify({
+            "error": "Request body must be valid JSON"
+        }), 400
 
     required = [
         "name", "age", "gender",
@@ -125,6 +162,7 @@ def update_member(member_id):
     ]
 
     missing = [field for field in required if field not in data]
+
     if missing:
         return jsonify({
             "error": "Missing required fields",
@@ -139,65 +177,116 @@ def update_member(member_id):
         isinstance(value, str) and value.strip()
         for value in [name, gender, fitness_goal]
     ):
-        return jsonify({"error": "Name, gender and fitness goal are required"}), 400
+        return jsonify({
+            "error": "Name, gender and fitness goal are required"
+        }), 400
 
     try:
         age = int(data["age"])
         weight = float(data["weight"])
-        join_date = date.fromisoformat(data["join_date"])
     except (ValueError, TypeError):
         return jsonify({
-            "error": "Invalid age, weight or join_date; use YYYY-MM-DD"
+            "error": "Age must be an integer and weight a number"
         }), 400
 
     if not 1 <= age <= 120 or weight <= 0:
-        return jsonify({"error": "Invalid age or weight"}), 400
+        return jsonify({
+            "error": "Invalid age or weight"
+        }), 400
 
-    if join_date > date.today():
-        return jsonify({"error": "Join date cannot be in the future"}), 400
+    # Validate the join date.
+    try:
+        raw_join_date = data["join_date"]
+
+        if not isinstance(raw_join_date, str):
+            raise ValueError
+
+        join_date = date.fromisoformat(raw_join_date)
+
+        if join_date.isoformat() != raw_join_date:
+            raise ValueError
+
+    except (ValueError, TypeError):
+        return jsonify({
+            "error": "Invalid join date format. Use YYYY-MM-DD."
+        }), 400
+
+    today = get_indian_today()
+
+    if join_date > today:
+        return jsonify({
+            "error": "Join date cannot be in the future."
+        }), 400
 
     db = get_db()
 
     existing = db.execute(
-        "SELECT id FROM members WHERE id = ?", (member_id,)
+        "SELECT id FROM members WHERE id = ?",
+        (member_id,)
     ).fetchone()
 
     if existing is None:
-        return jsonify({"error": "Member not found"}), 404
+        return jsonify({
+            "error": "Member not found"
+        }), 404
 
-    db.execute(
-        """
-        UPDATE members
-        SET name = ?, age = ?, gender = ?, weight = ?,
-            fitness_goal = ?, join_date = ?
-        WHERE id = ?
-        """,
-        (
-            name.strip(), age, gender.strip(), weight,
-            fitness_goal.strip(), join_date.isoformat(), member_id
+    try:
+        db.execute(
+            """
+            UPDATE members
+            SET name = ?, age = ?, gender = ?, weight = ?,
+                fitness_goal = ?, join_date = ?
+            WHERE id = ?
+            """,
+            (
+                name.strip(),
+                age,
+                gender.strip(),
+                weight,
+                fitness_goal.strip(),
+                join_date.isoformat(),
+                member_id
+            )
         )
-    )
-    db.commit()
 
-    return jsonify({
-        "message": "Member updated successfully",
-        "member_id": member_id
-    }), 200
+        db.commit()
 
+        return jsonify({
+            "message": "Member updated successfully",
+            "member_id": member_id
+        }), 200
+
+    except Exception:
+        db.rollback()
+        return jsonify({
+            "error": "Unable to update member"
+        }), 500
+
+
+# ========================================
+# 4. DELETE MEMBER
+# ========================================
 
 @member_bp.delete("/members/<int:member_id>")
 def delete_member(member_id):
     db = get_db()
 
     existing = db.execute(
-        "SELECT id FROM members WHERE id = ?", (member_id,)
+        "SELECT id FROM members WHERE id = ?",
+        (member_id,)
     ).fetchone()
 
     if existing is None:
-        return jsonify({"error": "Member not found"}), 404
+        return jsonify({
+            "error": "Member not found"
+        }), 404
 
     try:
-        db.execute("DELETE FROM members WHERE id = ?", (member_id,))
+        db.execute(
+            "DELETE FROM members WHERE id = ?",
+            (member_id,)
+        )
+
         db.commit()
 
         return jsonify({
@@ -208,6 +297,8 @@ def delete_member(member_id):
     except Exception:
         db.rollback()
         return jsonify({
-            "error": "Unable to delete member. Check whether related records prevent deletion."
+            "error": (
+                "Unable to delete member. Check whether "
+                "related records prevent deletion."
+            )
         }), 409
-
