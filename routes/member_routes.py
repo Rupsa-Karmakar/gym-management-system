@@ -2,6 +2,9 @@
 from flask import Blueprint, request, jsonify
 from datetime import date
 from db import get_db
+from zoneinfo import ZoneInfo
+
+today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
 
 member_bp = Blueprint("members", __name__)
 
